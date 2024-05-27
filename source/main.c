@@ -1,56 +1,66 @@
 #include <citro2d.h>
 #include <citro3d.h>
 
-#include <string.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
+#define UPPER_SCREEN_UNKNOWN "Upper: Unknown"
+#define LOWER_SCREEN_UNKNOWN " | Lower: Unknown"
+#define UPPER_SCREEN_IPS "Upper: IPS"
+#define LOWER_SCREEN_IPS " | Lower: IPS"
+#define UPPER_SCREEN_TN "Upper: TN"
+#define LOWER_SCREEN_TN " | Lower: TN"
 
-// [[nodiscard]] attribute indicates that the return value of the function should not be ignored.
+// Checks if the device is a New 3DS model.
 [[nodiscard]] bool UtilsIsN3Ds(void) {
   bool is_new_3ds = false;
   return R_SUCCEEDED(APT_CheckNew3DS(&is_new_3ds)) && is_new_3ds;
 }
 
+// Determines the screen types and returns a descriptive string.
 char* SystemGetScreenType(void) {
-  static char upper_screen[20];
-  static char lower_screen[20];
-  static char screen_type[32];
+  static char screen_type[32] = {0};
 
   if (UtilsIsN3Ds()) {
     u8 screens = 0;
 
     if (R_SUCCEEDED(gspLcdInit())) {
-      if (R_SUCCEEDED(GSPLCD_GetVendors(&screens))) gspLcdExit();
+      if (R_SUCCEEDED(GSPLCD_GetVendors(&screens))) {
+        gspLcdExit();
+      }
     }
 
+    const char* upper_screen;
+    const char* lower_screen;
+
     switch ((screens >> 4) & 0xF) {
-      case 0x01:  // 0x01 = JDI => IPS
-        sprintf(upper_screen, "Upper: IPS");
+      case 0x01:
+        upper_screen = UPPER_SCREEN_IPS;
         break;
-      case 0x0C:  // 0x0C = SHARP => TN
-        sprintf(upper_screen, "Upper: TN");
+      case 0x0C:
+        upper_screen = UPPER_SCREEN_TN;
         break;
       default:
-        sprintf(upper_screen, "Upper: Unknown");
+        upper_screen = UPPER_SCREEN_UNKNOWN;
         break;
     }
 
     switch (screens & 0xF) {
-      case 0x01:  // 0x01 = JDI => IPS
-        sprintf(lower_screen, " | Lower: IPS");
+      case 0x01:
+        lower_screen = LOWER_SCREEN_IPS;
         break;
-      case 0x0C:  // 0x0C = SHARP => TN
-        sprintf(lower_screen, " | Lower: TN");
+      case 0x0C:
+        lower_screen = LOWER_SCREEN_TN;
         break;
       default:
-        sprintf(lower_screen, " | Lower: Unknown");
+        lower_screen = LOWER_SCREEN_UNKNOWN;
         break;
     }
 
-    strcpy(screen_type, upper_screen);
-    strcat(screen_type, lower_screen);
+    snprintf(screen_type, sizeof(screen_type), "%s%s", upper_screen, lower_screen);
   } else {
-    sprintf(screen_type, "Upper: TN | Lower: TN");
+    snprintf(screen_type, sizeof(screen_type), "%s%s", UPPER_SCREEN_TN, LOWER_SCREEN_TN);
   }
 
   return screen_type;
@@ -61,6 +71,7 @@ u8 battery_status = 0;
 bool is_connected = false;
 bool is_bottom_screen = false;
 
+// Prints static information on the console.
 void PrintStaticInfo(void) {
   printf("\x1b[1;0H\x1b[32mGreenCitrus\x1b[0m \nTool for de-yellow'ing TN screens");
   printf("\x1b[4;0H\x1b[31;1m*\x1b[0m Screen type:\x1b[31;1m %s \x1b[0m", SystemGetScreenType());
@@ -71,26 +82,31 @@ void PrintStaticInfo(void) {
   printf("\x1b[30;0HPress\x1b[31;1m START\x1b[0m to exit");
 }
 
+// Prints dynamic information on the console.
 void PrintDynamicInfo(void) {
-  if (R_SUCCEEDED(MCUHWC_GetBatteryLevel(&battery_percent)))
+  if (R_SUCCEEDED(MCUHWC_GetBatteryLevel(&battery_percent))) {
     printf("\x1b[6;22H\x1b[34;1m%3d%%\x1b[0m ", battery_percent);
-  else
+  } else {
     printf("\x1b[34;1mN/A\x1b[0m ");
+  }
 
-  if (R_SUCCEEDED(PTMU_GetBatteryChargeState(&battery_status)))
+  if (R_SUCCEEDED(PTMU_GetBatteryChargeState(&battery_status))) {
     printf("(\x1b[34;1m%s\x1b[0m)     \n", battery_status ? "charging" : "not charging");
-  else
+  } else {
     printf("(\x1b[34;1mN/A\x1b[0m)\n");
+  }
 
   printf("\x1b[8;18H");
-  if (R_SUCCEEDED(PTMU_GetAdapterState(&is_connected)))
+  if (R_SUCCEEDED(PTMU_GetAdapterState(&is_connected))) {
     printf("\x1b[34;1m%s\x1b[0m\n", is_connected ? "connected   " : "disconnected");
-  else
+  } else {
     printf("\x1b[34;1mN/A\x1b[0m\n");
+  }
 
   printf("\x1b[10;19H \x1b[32m>\x1b[0m%s", is_bottom_screen ? "bottom" : "top");
 }
 
+// Draws a frame with the specified color.
 void DrawFrame(C3D_RenderTarget* screen, u32 color) {
   C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
   C2D_TargetClear(screen, color);
@@ -98,12 +114,14 @@ void DrawFrame(C3D_RenderTarget* screen, u32 color) {
   C3D_FrameEnd(0);
 }
 
+// Initializes necessary services.
 void InitServices(void) {
   mcuHwcInit();  // Battery info
   ptmuInit();    // Charger info
   gspLcdInit();  // Screen brightness
 }
 
+// Terminates previously initialized services.
 void TerminateServices(void) {
   ptmuExit();    // Battery info
   mcuHwcExit();  // Charger info
