@@ -1,9 +1,7 @@
 #include <citro2d.h>
 #include <citro3d.h>
 
-#include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
 
 #define UPPER_SCREEN_UNKNOWN "Upper: Unknown"
 #define LOWER_SCREEN_UNKNOWN " | Lower: Unknown"
@@ -73,13 +71,14 @@ bool is_bottom_screen = false;
 
 // Prints static information on the console.
 void PrintStaticInfo(void) {
-  printf("\x1b[1;0H\x1b[32mGreenCitrus\x1b[0m \nTool for de-yellow'ing TN screens");
-  printf("\x1b[4;0H\x1b[31;1m*\x1b[0m Screen type:\x1b[31;1m %s \x1b[0m", SystemGetScreenType());
-  printf("\x1b[6;0H\x1b[34;1m*\x1b[0m Battery percentage:");
-  printf("\x1b[8;0H\x1b[34;1m*\x1b[0m Adapter state:");
-  printf("\x1b[10;0H\x1b[32m*\x1b[0m Selected screen:");
-  printf("\x1b[11;0HPress \x1b[32mUP\x1b[0m or \x1b[32mDOWN\x1b[0m to select screen");
-  printf("\x1b[30;0HPress\x1b[31;1m START\x1b[0m to exit");
+  printf("\x1b[1;0H\x1b[32mGreenCitrus\x1b[0m \nTool for de-yellow'ing TN screens"
+        "\x1b[4;0H\x1b[31;1m*\x1b[0m Screen type:\x1b[31;1m %s \x1b[0m"
+        "\x1b[6;0H\x1b[34;1m*\x1b[0m Battery percentage:"
+        "\x1b[8;0H\x1b[34;1m*\x1b[0m Adapter state:"
+        "\x1b[10;0H\x1b[32m*\x1b[0m Selected screen:"
+        "\x1b[11;0HPress \x1b[32mUP\x1b[0m or \x1b[32mDOWN\x1b[0m to select screen"
+        "\x1b[30;0HPress\x1b[31;1m START\x1b[0m to exit", SystemGetScreenType()
+  );
 }
 
 // Prints dynamic information on the console.
@@ -130,7 +129,7 @@ void TerminateServices(void) {
 
 int main(void) {
   // Initialize libraries.
-  gfxInitDefault();
+  gfxInitDefault(); // Initialize framebuffer
   C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
   C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
   C2D_Prepare();
