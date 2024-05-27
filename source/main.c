@@ -162,19 +162,10 @@ int main(void) {
 
     PrintDynamicInfo();
 
-    if (k_down & KEY_DDOWN) {
+    if (k_down & KEY_DDOWN || k_down & KEY_DUP) {
       DrawFrame(screen, clr_black);
-      screen = bot;
-      is_bottom_screen = true;
-      consoleSelect(&console_top);
-      PrintStaticInfo();
-      DrawFrame(screen, clr_white);
-    }
-    if (k_down & KEY_DUP) {
-      DrawFrame(screen, clr_black);
-      screen = top;
-      is_bottom_screen = false;
-      consoleSelect(&console_bottom);
+      screen = (k_down & KEY_DDOWN) ? bot : top;
+      consoleSelect((k_down & KEY_DDOWN) ? &console_top : &console_bottom);
       PrintStaticInfo();
       DrawFrame(screen, clr_white);
     }

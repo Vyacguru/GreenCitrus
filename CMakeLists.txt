@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(GreenCitrus LANGUAGES C VERSION 0.2.0)
+project(GreenCitrus LANGUAGES C VERSION 0.2.1)
 set(CMAKE_C_STANDARD 23)
 
 
