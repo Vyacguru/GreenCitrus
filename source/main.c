@@ -4,18 +4,18 @@
 #include <string.h>
 #include <stdio.h>
 
-bool Utils_IsN3DS(void) {
+bool UtilsIsN3Ds(void) {
   bool isNew3DS = false;
   return R_SUCCEEDED(APT_CheckNew3DS(&isNew3DS)) && isNew3DS;
 }
 
-char *System_GetScreenType(void) {
+char *SystemGetScreenType(void) {
   static char upperScreen[20];
   static char lowerScreen[20];
 
   static char screenType[32];
 
-  if (Utils_IsN3DS()) {
+  if (UtilsIsN3Ds()) {
     u8 screens = 0;
 
     if (R_SUCCEEDED(gspLcdInit())) {
@@ -52,47 +52,43 @@ char *System_GetScreenType(void) {
   return screenType;
 }
 
-u8 battery_percent = 0, battery_status = 0;
-bool is_connected = false;
-bool is_bottom_screen = false;
+u8 batteryPercent = 0;
+u8 batteryStatus = 0;
+bool isConnected = false;
+bool isBottomScreen = false;
 
-void Print_Static_Info(void) {
-  printf(
-      "\x1b[1;0H\x1b[32mGreenCitrus\x1b[0m \nTool for de-yellow'ing TN screens");
-  printf("\x1b[4;0H\x1b[31;1m*\x1b[0m Screen type:\x1b[31;1m %s \x1b[0m",
-         System_GetScreenType());
+void PrintStaticInfo(void) {
+  printf("\x1b[1;0H\x1b[32mGreenCitrus\x1b[0m \nTool for de-yellow'ing TN screens");
+  printf("\x1b[4;0H\x1b[31;1m*\x1b[0m Screen type:\x1b[31;1m %s \x1b[0m", SystemGetScreenType());
   printf("\x1b[6;0H\x1b[34;1m*\x1b[0m Battery percentage:");
   printf("\x1b[8;0H\x1b[34;1m*\x1b[0m Adapter state:");
   printf("\x1b[10;0H\x1b[32m*\x1b[0m Selected screen:");
-  printf(
-      "\x1b[11;0HPress \x1b[32mUP\x1b[0m or \x1b[32mDOWN\x1b[0m to select screen");
+  printf("\x1b[11;0HPress \x1b[32mUP\x1b[0m or \x1b[32mDOWN\x1b[0m to select screen");
   printf("\x1b[30;0HPress\x1b[31;1m START\x1b[0m to exit");
 
 }
 
-void Print_Dynamic_Info(void) {
-  if (R_SUCCEEDED(MCUHWC_GetBatteryLevel(&battery_percent))) {
-    printf("\x1b[6;22H\x1b[34;1m%3d%%\x1b[0m ", battery_percent);
-  } else {
+void PrintDynamicInfo(void) {
+  if (R_SUCCEEDED(MCUHWC_GetBatteryLevel(&batteryPercent)))
+    printf("\x1b[6;22H\x1b[34;1m%3d%%\x1b[0m ", batteryPercent);
+  else
     printf("\x1b[34;1mN/A\x1b[0m ");
-  }
-  if (R_SUCCEEDED(PTMU_GetBatteryChargeState(&battery_status))) {
-    printf("(\x1b[34;1m%s\x1b[0m)     \n",
-           battery_status ? "charging" : "not charging");
-  } else {
+
+  if (R_SUCCEEDED(PTMU_GetBatteryChargeState(&batteryStatus)))
+    printf("(\x1b[34;1m%s\x1b[0m)     \n", batteryStatus ? "charging" : "not charging");
+  else
     printf("(\x1b[34;1mN/A\x1b[0m)\n");
-  }
+
   printf("\x1b[8;18H");
-  if (R_SUCCEEDED(PTMU_GetAdapterState(&is_connected))) {
-    printf("\x1b[34;1m%s\x1b[0m\n",
-           is_connected ? "connected   " : "disconnected");
-  } else {
+  if (R_SUCCEEDED(PTMU_GetAdapterState(&isConnected)))
+    printf("\x1b[34;1m%s\x1b[0m\n", isConnected ? "connected   " : "disconnected");
+  else
     printf("\x1b[34;1mN/A\x1b[0m\n");
-  }
-  printf("\x1b[10;19H \x1b[32m>\x1b[0m%s", is_bottom_screen ? "bottom" : "top");
+
+  printf("\x1b[10;19H \x1b[32m>\x1b[0m%s", isBottomScreen ? "bottom" : "top");
 }
 
-void Draw_Frame(C3D_RenderTarget *screen, u32 color) {
+void DrawFrame(C3D_RenderTarget *screen, u32 color) {
   C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
   C2D_TargetClear(screen, color);
   C2D_SceneBegin(screen);
@@ -116,19 +112,17 @@ int main() {
 
 
   // Create screens
-  C3D_RenderTarget
-      *top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT); // Top screen Left eye
-  C3D_RenderTarget *bot = C2D_CreateScreenTarget(GFX_BOTTOM,
-                                                 GFX_LEFT); // Bottom screen Left eye (always)
+  C3D_RenderTarget *top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+  C3D_RenderTarget *bot = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
   C3D_RenderTarget *screen = top;
 
   // Create colors
   u32 clrWhite = C2D_Color32(0xFF, 0xFF, 0xFF, 0xFF);
   u32 clrBlack = C2D_Color32(0x00, 0x00, 0x00, 0x00);
 
-  Draw_Frame(screen, clrWhite);
+  DrawFrame(screen, clrWhite);
   consoleSelect(&consoleBottom);
-  Print_Static_Info();
+  PrintStaticInfo();
 
   // Main loop
   while (aptMainLoop()) {
@@ -139,23 +133,23 @@ int main() {
     if (kDown & KEY_START)
       break; // break in order to return to hbmenu
 
-    Print_Dynamic_Info();
+    PrintDynamicInfo();
 
     if (kDown & KEY_DDOWN) {
-      Draw_Frame(screen, clrBlack);
+      DrawFrame(screen, clrBlack);
       screen = bot;
-      is_bottom_screen = true;
+      isBottomScreen = true;
       consoleSelect(&consoleTop);
-      Print_Static_Info();
-      Draw_Frame(screen, clrWhite);
+      PrintStaticInfo();
+      DrawFrame(screen, clrWhite);
     }
     if (kDown & KEY_DUP) {
-      Draw_Frame(screen, clrBlack);
+      DrawFrame(screen, clrBlack);
       screen = top;
-      is_bottom_screen = false;
+      isBottomScreen = false;
       consoleSelect(&consoleBottom);
-      Print_Static_Info();
-      Draw_Frame(screen, clrWhite);
+      PrintStaticInfo();
+      DrawFrame(screen, clrWhite);
     }
   }
 
