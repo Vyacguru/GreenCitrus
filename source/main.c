@@ -77,6 +77,7 @@ void PrintStaticInfo(void) {
         "\x1b[8;0H\x1b[34;1m*\x1b[0m Adapter state:"
         "\x1b[10;0H\x1b[32m*\x1b[0m Selected screen:"
         "\x1b[11;0HPress \x1b[32mUP\x1b[0m or \x1b[32mDOWN\x1b[0m to select screen"
+        "\x1b[29;0HPress \x1b[31;mSELECT\x1b[0m to select both screens"
         "\x1b[30;0HPress\x1b[31;1m START\x1b[0m to exit", SystemGetScreenType()
   );
 }
@@ -86,7 +87,7 @@ void PrintDynamicInfo(void) {
   if (R_SUCCEEDED(MCUHWC_GetBatteryLevel(&battery_percent))) {
     printf("\x1b[6;22H\x1b[34;1m%3d%%\x1b[0m ", battery_percent);
   } else {
-    printf("\x1b[34;1mN/A\x1b[0m ");
+    printf("\x1b[6;22H\x1b[34;1mN/A\x1b[0m ");
   }
 
   if (R_SUCCEEDED(PTMU_GetBatteryChargeState(&battery_status))) {
@@ -95,11 +96,10 @@ void PrintDynamicInfo(void) {
     printf("(\x1b[34;1mN/A\x1b[0m)\n");
   }
 
-  printf("\x1b[8;18H");
   if (R_SUCCEEDED(PTMU_GetAdapterState(&is_connected))) {
-    printf("\x1b[34;1m%s\x1b[0m\n", is_connected ? "connected   " : "disconnected");
+    printf("\x1b[8;18H\x1b[34;1m%s\x1b[0m\n", is_connected ? "connected   " : "disconnected");
   } else {
-    printf("\x1b[34;1mN/A\x1b[0m\n");
+    printf("\x1b[8;18H\x1b[34;1mN/A\x1b[0m\n");
   }
 
   printf("\x1b[10;19H \x1b[32m>\x1b[0m%s", is_bottom_screen ? "bottom" : "top");
@@ -110,6 +110,15 @@ void DrawFrame(C3D_RenderTarget* screen, u32 color) {
   C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
   C2D_TargetClear(screen, color);
   C2D_SceneBegin(screen);
+  C3D_FrameEnd(0);
+}
+
+void DrawFrameOnBoth(C3D_RenderTarget* top, C3D_RenderTarget* bot, u32 color) {
+  C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+  C2D_TargetClear(top, color);
+  C2D_TargetClear(bot, color);
+  C2D_SceneBegin(top);
+  C2D_SceneBegin(bot);
   C3D_FrameEnd(0);
 }
 
@@ -151,6 +160,7 @@ int main(void) {
   DrawFrame(screen, clr_white);
   consoleSelect(&console_bottom);
   PrintStaticInfo();
+  bool isBothScreens = false;
 
   // Main loop.
   while (aptMainLoop()) {
@@ -160,14 +170,20 @@ int main(void) {
     u32 k_down = hidKeysDown();
     if (k_down & KEY_START) break;  // Break to return to hbmenu.
 
-    PrintDynamicInfo();
+    if (!isBothScreens) PrintDynamicInfo();
 
     if (k_down & KEY_DDOWN || k_down & KEY_DUP) {
+      isBothScreens = false;
       DrawFrame(screen, clr_black);
       screen = (k_down & KEY_DDOWN) ? bot : top;
       consoleSelect((k_down & KEY_DDOWN) ? &console_top : &console_bottom);
       PrintStaticInfo();
       DrawFrame(screen, clr_white);
+    }
+    if (k_down & KEY_SELECT) {
+       isBothScreens = true;
+       DrawFrameOnBoth(top, bot, clr_black);
+       DrawFrameOnBoth(top, bot, clr_white);
     }
   }
 
