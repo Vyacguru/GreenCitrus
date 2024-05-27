@@ -2,6 +2,7 @@
 #include <citro3d.h>
 
 #include <stdio.h>
+#include <time.h>
 
 #define UPPER_SCREEN_UNKNOWN "Upper: Unknown"
 #define LOWER_SCREEN_UNKNOWN " | Lower: Unknown"
@@ -11,13 +12,14 @@
 #define LOWER_SCREEN_TN " | Lower: TN"
 
 // Checks if the device is a New 3DS model.
-[[nodiscard]] bool UtilsIsN3Ds(void) {
+[[nodiscard]]
+bool UtilsIsN3Ds(void) {
   bool is_new_3ds = false;
   return R_SUCCEEDED(APT_CheckNew3DS(&is_new_3ds)) && is_new_3ds;
 }
 
 // Determines the screen types and returns a descriptive string.
-char* SystemGetScreenType(void) {
+char *SystemGetScreenType(void) {
   static char screen_type[32] = {0};
 
   if (UtilsIsN3Ds()) {
@@ -29,30 +31,24 @@ char* SystemGetScreenType(void) {
       }
     }
 
-    const char* upper_screen;
-    const char* lower_screen;
+    const char *upper_screen;
+    const char *lower_screen;
 
     switch ((screens >> 4) & 0xF) {
-      case 0x01:
-        upper_screen = UPPER_SCREEN_IPS;
+      case 0x01:upper_screen = UPPER_SCREEN_IPS;
         break;
-      case 0x0C:
-        upper_screen = UPPER_SCREEN_TN;
+      case 0x0C:upper_screen = UPPER_SCREEN_TN;
         break;
-      default:
-        upper_screen = UPPER_SCREEN_UNKNOWN;
+      default:upper_screen = UPPER_SCREEN_UNKNOWN;
         break;
     }
 
     switch (screens & 0xF) {
-      case 0x01:
-        lower_screen = LOWER_SCREEN_IPS;
+      case 0x01:lower_screen = LOWER_SCREEN_IPS;
         break;
-      case 0x0C:
-        lower_screen = LOWER_SCREEN_TN;
+      case 0x0C:lower_screen = LOWER_SCREEN_TN;
         break;
-      default:
-        lower_screen = LOWER_SCREEN_UNKNOWN;
+      default:lower_screen = LOWER_SCREEN_UNKNOWN;
         break;
     }
 
@@ -68,18 +64,30 @@ u8 battery_percent = 0;
 u8 battery_status = 0;
 bool is_connected = false;
 bool is_bottom_screen = false;
+time_t start_time;  // Variable to store the start time
 
 // Prints static information on the console.
 void PrintStaticInfo(void) {
   printf("\x1b[1;0H\x1b[32mGreenCitrus\x1b[0m \nTool for de-yellow'ing TN screens"
-        "\x1b[4;0H\x1b[31;1m*\x1b[0m Screen type:\x1b[31;1m %s \x1b[0m"
-        "\x1b[6;0H\x1b[34;1m*\x1b[0m Battery percentage:"
-        "\x1b[8;0H\x1b[34;1m*\x1b[0m Adapter state:"
-        "\x1b[10;0H\x1b[32m*\x1b[0m Selected screen:"
-        "\x1b[11;0HPress \x1b[32mUP\x1b[0m or \x1b[32mDOWN\x1b[0m to select screen"
-        "\x1b[29;0HPress \x1b[31;mSELECT\x1b[0m to select both screens"
-        "\x1b[30;0HPress\x1b[31;1m START\x1b[0m to exit", SystemGetScreenType()
+         "\x1b[4;0H\x1b[31;1m*\x1b[0m Screen type:\x1b[31;1m %s \x1b[0m"
+         "\x1b[6;0H\x1b[34;1m*\x1b[0m Battery percentage:"
+         "\x1b[8;0H\x1b[34;1m*\x1b[0m Adapter state:"
+         "\x1b[10;0H\x1b[32m*\x1b[0m Selected screen:"
+         "\x1b[11;0HPress \x1b[32mUP\x1b[0m or \x1b[32mDOWN\x1b[0m to select screen"
+         "\x1b[15;0HElapsed time:"
+         "\x1b[29;0HPress \x1b[31;mSELECT\x1b[0m to select both screens"
+         "\x1b[30;0HPress\x1b[31;1m START\x1b[0m to exit", SystemGetScreenType()
   );
+}
+
+// Calculates and prints elapsed time.
+void PrintElapsedTime(void) {
+  time_t current_time = time(NULL);
+  int elapsed_seconds = difftime(current_time, start_time);
+  int hours = elapsed_seconds / 3600;
+  int minutes = (elapsed_seconds % 3600) / 60;
+  int seconds = elapsed_seconds % 60;
+  printf("\x1b[15;15H\x1b[35;1m%02d:%02d:%02d\x1b[0m", hours, minutes, seconds);
 }
 
 // Prints dynamic information on the console.
@@ -103,17 +111,20 @@ void PrintDynamicInfo(void) {
   }
 
   printf("\x1b[10;19H \x1b[32m>\x1b[0m%s", is_bottom_screen ? "bottom" : "top");
+
+  // Print elapsed time
+  PrintElapsedTime();
 }
 
 // Draws a frame with the specified color.
-void DrawFrame(C3D_RenderTarget* screen, u32 color) {
+void DrawFrame(C3D_RenderTarget *screen, u32 color) {
   C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
   C2D_TargetClear(screen, color);
   C2D_SceneBegin(screen);
   C3D_FrameEnd(0);
 }
 
-void DrawFrameOnBoth(C3D_RenderTarget* top, C3D_RenderTarget* bot, u32 color) {
+void DrawFrameOnBoth(C3D_RenderTarget *top, C3D_RenderTarget *bot, u32 color) {
   C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
   C2D_TargetClear(top, color);
   C2D_TargetClear(bot, color);
@@ -149,9 +160,9 @@ int main(void) {
   GSPLCD_SetBrightness(GSPLCD_SCREEN_BOTH, 5);
 
   // Create screens.
-  C3D_RenderTarget* top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
-  C3D_RenderTarget* bot = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
-  C3D_RenderTarget* screen = top;
+  C3D_RenderTarget *top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+  C3D_RenderTarget *bot = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
+  C3D_RenderTarget *screen = top;
 
   // Create colors.
   u32 clr_white = C2D_Color32(0xFF, 0xFF, 0xFF, 0xFF);
@@ -161,6 +172,9 @@ int main(void) {
   consoleSelect(&console_bottom);
   PrintStaticInfo();
   bool isBothScreens = false;
+
+  // Initialize start time
+  start_time = time(NULL);
 
   // Main loop.
   while (aptMainLoop()) {
@@ -181,9 +195,9 @@ int main(void) {
       DrawFrame(screen, clr_white);
     }
     if (k_down & KEY_SELECT) {
-       isBothScreens = true;
-       DrawFrameOnBoth(top, bot, clr_black);
-       DrawFrameOnBoth(top, bot, clr_white);
+      isBothScreens = true;
+      DrawFrameOnBoth(top, bot, clr_black);
+      DrawFrameOnBoth(top, bot, clr_white);
     }
   }
 
