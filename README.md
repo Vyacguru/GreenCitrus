@@ -15,7 +15,7 @@ GreenCitrus is a homebrew project for the Nintendo 3DS, designed to mitigate the
 
 ### How It Works
 
-1. **Screen Detection**: GreenCitrus detects whether the device is a New Nintendo 3DS and identifies the type of screens (TN or IPS) installed.
+1. **Screen Detection**: GreenCitrus detects whether the device is a New Nintendo 3DS or Old Nintendo 3DS and identifies the type of screens (TN or IPS) installed.
 2. **De-Yellow'ing Process**: By setting the TN screen to display white at maximum brightness for an extended duration (recommended between 6 hours to 24 hours), the yellow tint can be reduced or eliminated.
 3. **User Interaction**: Users can interact with the tool using the D-pad to select which screen to de-yellow, and view relevant information such as battery percentage and adapter state.
 
@@ -43,7 +43,7 @@ To build GreenCitrus from source, you will need the following:
 Clone the repository and build using CMake:
 
 ```sh
-git clone https://github.com/Pugemon/GreenCitrus.git
+git clone https://github.com/Vyacguru/GreenCitrus.git
 cd GreenCitrus
 mkdir ./build
 /opt/devkitpro/portlibs/3ds/bin/arm-none-eabi-cmake -B ./build -S .
@@ -62,4 +62,4 @@ This homebrew was inspired by a video by Jake64. You can watch it [here](https:/
 
 ---
 
-GreenCitrus is designed to improve the viewing experience on TN screens by reducing the yellow tint. We hope you find it useful! If you have any questions or feedback, please open an issue on our [GitHub repository](https://github.com/Pugemon/GreenCitrus/issues).
+GreenCitrus is designed to improve the viewing experience on TN screens by reducing the yellow tint. We hope you find it useful! If you have any questions or feedback, please open an issue in [Issues page](https://github.com/Vyacguru/GreenCitrus/issues).
